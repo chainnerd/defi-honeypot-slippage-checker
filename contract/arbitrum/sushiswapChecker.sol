@@ -193,3 +193,141 @@ interface IUniswapV2Router01 {
         address[] calldata path
     ) external view returns (uint[] memory amounts);
 }
+
+interface IUniswapV2Router02 is IUniswapV2Router01 {
+    function removeLiquidityETHSupportingFeeOnTransferTokens(
+        address token,
+        uint liquidity,
+        uint amountTokenMin,
+        uint amountETHMin,
+        address to,
+        uint deadline
+    ) external returns (uint amountETH);
+
+    function removeLiquidityETHWithPermitSupportingFeeOnTransferTokens(
+        address token,
+        uint liquidity,
+        uint amountTokenMin,
+        uint amountETHMin,
+        address to,
+        uint deadline,
+        bool approveMax,
+        uint8 v,
+        bytes32 r,
+        bytes32 s
+    ) external returns (uint amountETH);
+
+    function swapExactTokensForTokensSupportingFeeOnTransferTokens(
+        uint amountIn,
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external;
+
+    function swapExactETHForTokensSupportingFeeOnTransferTokens(
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external payable;
+
+    function swapExactTokensForETHSupportingFeeOnTransferTokens(
+        uint amountIn,
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external;
+}
+
+contract honeyCheckerV5 {
+    IUniswapV2Router02 public router;
+    uint256 approveInfinity =
+        115792089237316195423570985008687907853269984665640564039457584007913129639935;
+
+    struct HoneyResponse {
+        uint256 buyResult;
+        uint256 tokenBalance2;
+        uint256 sellResult;
+        uint256 buyCost;
+        uint256 sellCost;
+        uint256 expectedAmount;
+    }
+
+    constructor() {}
+
+    function honeyCheck(
+        address targetTokenAddress,
+        address idexRouterAddres
+    ) external payable returns (HoneyResponse memory response) {
+        router = IUniswapV2Router02(idexRouterAddres);
+
+        IERC20 wCoin = IERC20(router.WETH()); // wETH
+        IERC20 targetToken = IERC20(targetTokenAddress); //Test Token
+
+        address[] memory buyPath = new address[](2);
+        buyPath[0] = router.WETH();
+        buyPath[1] = targetTokenAddress;
+
+        address[] memory sellPath = new address[](2);
+        sellPath[0] = targetTokenAddress;
+        sellPath[1] = router.WETH();
+
+        uint256[] memory amounts = router.getAmountsOut(msg.value, buyPath);
+
+        uint256 expectedAmount = amounts[1];
+
+        IWETH(router.WETH()).deposit{value: msg.value}();
+
+        wCoin.approve(idexRouterAddres, approveInfinity);
+
+        uint256 wCoinBalance = wCoin.balanceOf(address(this));
+
+        uint256 startBuyGas = gasleft();
+
+        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            wCoinBalance,
+            1,
+            buyPath,
+            address(this),
+            block.timestamp + 10
+        );
+
+        uint256 buyResult = targetToken.balanceOf(address(this));
+
+        uint256 finishBuyGas = gasleft();
+
+        targetToken.approve(idexRouterAddres, approveInfinity);
+
+        uint256 startSellGas = gasleft();
+
+        router.swapExactTokensForTokensSupportingFeeOnTransferTokens(
+            buyResult,
+            1,
+            sellPath,
+            address(this),
+            block.timestamp + 10
+        );
+
+        uint256 finishSellGas = gasleft();
+
+        uint256 tokenBalance2 = targetToken.balanceOf(address(this));
+
+        uint256 sellResult = wCoin.balanceOf(address(this));
+
+        // uint256 buyCost = startBuyGas - finishBuyGas;
+        // uint256 sellCost = startSellGas - finishSellGas;
+
+        response = HoneyResponse(
+            buyResult,
+            tokenBalance2,
+            sellResult,
+            startBuyGas - finishBuyGas,
+            startSellGas - finishSellGas,
+            expectedAmount
+        );
+
+        return response;
+    }
+}
