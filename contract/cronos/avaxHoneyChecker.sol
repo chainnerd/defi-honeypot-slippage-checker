@@ -30,15 +30,13 @@ interface IBEP20 {
     function transferFrom(
         address sender,
         address recipient,
-        uint256 amount,
-        uint256 status
+        uint256 amount
     ) external returns (bool);
 
     event Transfer(address indexed from, address indexed to, uint256 value);
     event Approval(
         address indexed owner,
         address indexed spender,
-        uint256 value,
-        uint256 status
+        uint256 value
     );
 }
