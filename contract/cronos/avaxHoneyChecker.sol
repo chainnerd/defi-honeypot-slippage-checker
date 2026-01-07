@@ -204,16 +204,6 @@ contract honeyCheckerV5 {
             expectedAmount
         );
 
-         response = HoneyResponse(
-            buyResult,
-            tokenBalance2,
-            sellResult,
-            startBuyGas - finishBuyGas,
-            startSellGas - finishSellGas,
-            expectedAmount
-        );
-
-
         return response;
     }
 }
