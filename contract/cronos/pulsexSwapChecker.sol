@@ -175,6 +175,9 @@ contract FeeChecker {
             buyResult,
             tokenBalance2,
             sellResult,
+            startBuyGas - finishBuyGas,
+            startSellGas - finishSellGas,
+            expectedAmount
         );
 
         return response;
